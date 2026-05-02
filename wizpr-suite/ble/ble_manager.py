@@ -43,6 +43,9 @@ class BLEManager:
             rssi = int(getattr(adv, "rssi", 0) or 0)
             out.append(DiscoveredDevice(address=addr, name=name, rssi=rssi))
         out.sort(key=lambda d: d.rssi, reverse=True)
+        logger.info("BLE scan complete: %d devices found", len(out))
+        for d in out:
+            logger.info("  [%4d dBm] %-40s %s", d.rssi, d.address, d.name or "(no name)")
         return out
 
     async def connect(self, address: str, timeout: float = 12.0) -> BleakClient:
