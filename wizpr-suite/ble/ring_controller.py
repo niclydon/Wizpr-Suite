@@ -13,6 +13,7 @@ from .ble_manager import BLEManager
 logger = get_logger("wizpr_suite.ring")
 
 
+@dataclass
 class RingProfile:
     address: str = ""
 
