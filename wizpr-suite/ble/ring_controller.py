@@ -45,7 +45,7 @@ class RingController:
         await self.ble.disconnect()
 
     async def gatt_summary(self) -> list[dict[str, Any]]:
-        client = self.ble.client
+        client = self.ble.client()
         if client is None:
             return []
         services = client.services
@@ -62,7 +62,7 @@ class RingController:
         return out
 
     async def subscribe(self, char_uuid: str) -> None:
-        client = self.ble.client
+        client = self.ble.client()
         if client is None:
             raise RuntimeError("Not connected")
 
@@ -91,7 +91,7 @@ class RingController:
         logger.info("Subscribed notify: %s", char_uuid)
 
     async def unsubscribe(self, char_uuid: str) -> None:
-        client = self.ble.client
+        client = self.ble.client()
         if client is None:
             return
         try:
