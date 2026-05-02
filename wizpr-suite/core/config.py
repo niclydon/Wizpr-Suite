@@ -8,23 +8,27 @@ APP_NAME = "WizprSuite"
 CONFIG_FILE = "config.json"
 
 
+@dataclass
 class OpenAIConfig:
     api_key: str = ""
     model: str = "gpt-4o-mini"
     base_url: str = ""  # optional
 
 
+@dataclass
 class OllamaConfig:
     base_url: str = "http://127.0.0.1:11434"
     model: str = "llama3.1:8b"
 
 
+@dataclass
 class OpenAICompatConfig:
     base_url: str = "http://127.0.0.1:8080"
     api_key: str = ""
     model: str = ""
 
 
+@dataclass
 class AppConfig:
     theme: str = "dark"  # dark/light
     openai: OpenAIConfig = field(default_factory=OpenAIConfig)
