@@ -44,8 +44,14 @@ class BLEManager:
             out.append(DiscoveredDevice(address=addr, name=name, rssi=rssi))
         out.sort(key=lambda d: d.rssi, reverse=True)
         logger.info("BLE scan complete: %d devices found", len(out))
-        for d in out:
-            logger.info("  [%4d dBm] %-40s %s", d.rssi, d.address, d.name or "(no name)")
+        for addr, (dev, adv) in sorted(found.items(), key=lambda x: int(getattr(x[1][1], "rssi", 0) or 0), reverse=True):
+            name = (adv.local_name or dev.name or "").strip() or "(no name)"
+            rssi = int(getattr(adv, "rssi", 0) or 0)
+            svc_uuids = [str(u) for u in (getattr(adv, "service_uuids", None) or [])]
+            mfr_data = getattr(adv, "manufacturer_data", None) or {}
+            mfr_str = ", ".join(f"0x{k:04X}:{v.hex()}" for k, v in mfr_data.items()) if mfr_data else ""
+            logger.info("  [%4d dBm] %-36s  %-30s  svc=%s  mfr=%s",
+                        rssi, addr, name, svc_uuids or "[]", mfr_str or "")
         return out
 
     async def connect(self, address: str, timeout: float = 12.0) -> BleakClient:
