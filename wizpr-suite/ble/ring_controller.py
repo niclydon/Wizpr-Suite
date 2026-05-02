@@ -59,6 +59,11 @@ class RingController:
                     "description": str(getattr(c, "description", "")),
                 })
             out.append(sdict)
+        logger.info("GATT summary for %s:", self.profile.address)
+        for svc in out:
+            logger.info("  SVC %s (%s)", svc["uuid"], svc["description"])
+            for c in svc["characteristics"]:
+                logger.info("    CHAR %s  props=%s  (%s)", c["uuid"], c["properties"], c["description"])
         return out
 
     async def subscribe(self, char_uuid: str) -> None:
@@ -70,7 +75,7 @@ class RingController:
             await self.bus.publish("raw_notify", payload)
 
         def _cb(_sender: int, data: bytearray) -> None:
-            # publish raw
+            logger.info("NOTIFY %s  hex=%s  ascii=%r", char_uuid, data.hex(), bytes(data).decode("utf-8", errors="replace"))
             asyncio.create_task(_publish({"uuid": char_uuid, "data_hex": data.hex()}))
 
             # button events: if device emits ASCII tokens, map them
