@@ -66,8 +66,14 @@ Disconnect the ring from your iPhone before scanning. The ring only advertises w
 
 ---
 
-## Origin
+## Built on the shoulders of
 
-Forked from [R-D-BioTech-Alaska/Wizpr-Suite](https://github.com/R-D-BioTech-Alaska/Wizpr-Suite), which provided the initial BLE scaffolding (bleak scanner, GATT inspector, PySide6 skeleton) and the observation that the ring protocol is undocumented. That foundation made it possible to get connected and start capturing quickly. The capture tool, protocol analysis, and everything forward from here is new work.
+This repo is a fork of [R-D-BioTech-Alaska/Wizpr-Suite](https://github.com/R-D-BioTech-Alaska/Wizpr-Suite) and none of this work would have been possible without it.
+
+The original project did the genuinely hard parts: figuring out how to connect to the ring over BLE at all, building the GATT inspector to enumerate services and characteristics, wiring up bleak on Windows/macOS, scaffolding the PySide6 UI, and — critically — recognizing that the ring's protocol is undocumented and that the path forward is user-controlled reverse engineering. That framing and that tooling is what made it possible to go from zero to capturing real ring data in a single session.
+
+What this fork adds is a different lens: instead of a general-purpose LLM control plane, this is a focused protocol discovery tool — automated guided capture sessions, structured JSON output for analysis, a command explorer for probing the write characteristics, and the groundwork for building a custom iOS client once the protocol is fully mapped.
+
+Full credit and respect to the original authors. Go star [their repo](https://github.com/R-D-BioTech-Alaska/Wizpr-Suite).
 
 Licensed MIT. See [LICENSE](LICENSE).
