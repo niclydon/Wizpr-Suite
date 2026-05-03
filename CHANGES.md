@@ -4,6 +4,18 @@ Newest entry on top. One entry per meaningful decision or discovery. Append as y
 
 ---
 
+## 2026-05-03 — Audio codec identified: IMA ADPCM 16kHz continuous
+
+Decoded all WAV variants from 243 captured audio packets (voice_short + voice_long from session `2026-05-02-20-31-59.json`). `voice_long__adpcm_cont_16000.wav` was intelligible. All others — μ-law 8kHz, A-law 8kHz, ADPCM reset-per-packet at 8/16kHz, raw PCM — were noise or wrong speed.
+
+**Codec: IMA ADPCM (4-bit), 16kHz mono.** State carries continuously across BLE packets — do not reset between notifications. 224 bytes/packet × 2 nibbles = 448 samples ÷ 16kHz = 28ms/packet × 35.4 pkt/s = 0.99s audio per real second.
+
+Fixed 224-byte packet size was the key diagnostic — it ruled out Opus (variable bitrate) before any decoding was attempted. Only two codecs fit the math: ADPCM at 16kHz or μ-law/A-law at 8kHz. Both produce 28ms per packet at the observed rate. ADPCM continuous at 16kHz won.
+
+See `docs/audio_protocol.md` for the decoder snippet and integration guide.
+
+---
+
 ## 2026-05-03 — btsnoop analysis: iOS app sends only one command
 
 Captured BLE traffic from the official iOS Wizpr app using Apple PacketLogger with a Bluetooth diagnostic profile on iPhone 16 Pro. 7,113 HCI records. Of 202 ACL TX packets (phone → controller), exactly **2 were addressed to the ring's connection handle (0x403)**: both ATT WRITE_REQ to handle `0x0029` (char7), value `LOCK\r\n`.
