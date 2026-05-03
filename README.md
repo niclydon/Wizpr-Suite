@@ -103,9 +103,14 @@ python scripts/analyze_audio.py ~/.wizprsuite/captures/<session>.json
 
 ## What's still open
 
-- **Write-only chars** (`00000002`, `00000003`, `00000004`, `00000006`) - silently accept writes, observable effect unknown. The official iOS app does not use them in captured sessions; not needed for basic functionality. One of these may control haptic feedback if the ring has a vibration motor; worth probing.
-- **`LOCK` semantics** - confirmed it's used as a hard mute that overrides the ring's gesture state machine. Whether it does anything else (deep sleep, connection lock, power management) has not been fully characterized.
+- **`LOCK` semantics** - confirmed as a hard mute that overrides the ring's gesture state machine. Whether it does anything else (deep sleep, connection lock, power management) has not been fully characterized.
 - **OTA / firmware update channel** - one write-only characteristic on a separate service (`1d14d6ee-fd63-4fa1-bfa4-8f47b42119f0`) is unprobed. Likely OTA but not confirmed.
+
+## What's now closed
+
+- **Write-only chars** (`00000002`, `00000003`, `00000004`, `00000006`) - inert under all tested write patterns (134+ probes including single bytes, ASCII commands, length variations, and pattern data). Not used by the official iOS app. See [`docs/protocol.md`](docs/protocol.md) for full details.
+- **LED control** - the ring has a purple (RGB) LED that fires only on BLE connect. It is not GATT-addressable from any tested characteristic. Hardware-driven connection-acknowledgment indicator only.
+- **Haptic / audio output** - no vibration motor or speaker confirmed. The ring is effectively input-only from a programmatic perspective.
 
 ---
 

@@ -34,7 +34,11 @@ Charging dock is the small puck included in the package. The ring sits on the do
 
 **Wear orientation matters less than you'd expect.** The IMU appears to detect the gesture as a relative motion event, not an absolute orientation. Wearing the ring on your right hand vs left, or with the button facing palm-up vs palm-down, doesn't break gesture detection.
 
-**No haptic feedback observed.** No vibration, no audible tone, no LED visible while wearing. The ring has no output side that we have confirmed. (One of the four unmapped write-only characteristics may control haptic if a vibration motor exists; this has not been probed.)
+**Output channels: one LED, no haptic, no audio output.** The ring has a single purple (RGB) LED visible on the body. It fires briefly on every BLE connect as a connection-acknowledgment indicator. It is not controllable from any GATT characteristic we have tested (134+ probes across the four unmapped write-only chars `00000002`, `00000003`, `00000004`, `00000006`, plus the documented chars). The LED behavior appears to be hardwired into the chip's BLE stack at firmware level, not exposed at the application layer.
+
+No haptic motor or vibration was detected during any probe. No audible tone or speaker was detected. The ring is effectively input-only from a programmatic perspective.
+
+**Methodology note:** an earlier version of this doc claimed "no LED visible" based on a single wearing session. That was wrong. The LED is small and brief; missing it on a single observation was easy. The correction came from running `scripts/probe_led_isolate.py`, which walks each step of the BLE connect+subscribe sequence with prompts and isolated the LED to the connect step specifically. Negative claims about hardware features deserve more than one observation - a lesson that's also called out in `audio_protocol.md`'s identification method section, where the audio codec was identified by measuring invariants (fixed packet size) rather than relying on a single guess.
 
 ---
 

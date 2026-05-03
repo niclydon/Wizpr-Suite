@@ -113,7 +113,17 @@ Fires simultaneously with `MIC_ON` / `MIC_OFF` on char7. Redundant — char7 not
 
 **Properties:** write only
 
-Purpose unknown. All write attempts (ASCII commands, binary byte patterns) were silently accepted with no observable effect. Not used by the iOS app in captured sessions. Not needed for basic iOS app functionality.
+**Status:** functionally inert under tested write patterns.
+
+Probed with 134+ writes across single bytes (`0x00`, `0x01`, `0xFF`, `0x55`, `0xAA`), ASCII commands (`HAPTIC`, `VIBRATE`, `BUZZ`, `BEEP`, `PULSE`, `BLINK`, `LED_ON`, `LED_OFF`, `PING`, `WAKE`, `SLEEP`, `STATUS`, `PLAY`, `STOP`, parameterized variants), payload lengths from 1 to 300 bytes, and pattern data (incrementing, decrementing, alternating bits). No probe produced any LED, haptic, audible, or notification response from the ring.
+
+One probe in the original campaign (writing 200 bytes of `0xFF` to `00000002`) produced a software-only response: a synthetic mic burst (MIC_ON, mic state on, one 224-byte ADPCM frame on char1, MIC_OFF, mic state off) in 1.6ms wall-clock. This response was not reproducible in a clean BLE session via `probe_char2_followup.py`, suggesting it required accumulated firmware state from prior writes rather than being a feature of the channel itself.
+
+Not used by the iOS app in captured sessions. Not needed for basic iOS app functionality. The probe records are at `probe_results/probe-2026-05-02-23-33-11.jsonl` and `probe_results/followup-2026-05-02-23-55-23.jsonl` (local, not in the public repo) for anyone who wants to extend the campaign.
+
+#### LED (output channel, not GATT-addressable)
+
+The ring has a small purple (RGB) LED on its body. Confirmed via `scripts/probe_led_isolate.py`: the LED fires briefly on every BLE connect, regardless of which characteristics are subscribed. No write to any tested characteristic produces an LED response. The behavior is consistent with a connection-acknowledgment indicator handled by the chip's BLE stack rather than the application firmware. The ring has no other software-addressable output channel: no haptic, no speaker, no other LEDs.
 
 ---
 
