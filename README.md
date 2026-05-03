@@ -1,322 +1,73 @@
-<div align="center">
-  <h1>Wizpr Suite</h1>
-</div>
-<p align="center">
-  <img src="docs/images/wizpr_suite_logo.png"/>
-</p>
+# wizpr-tools
 
-<p align="center">
-  <b>BLE wearable control plane + multi-LLM desktop suite (Windows-first)</b><br/>
-  Turn ring button / proximity / voice events into actions across OpenAI, Ollama, and local LLM servers.
-</p>
+**A reverse-engineering and protocol exploration toolkit for the WIZPR Ring.**
 
-***12/25/2025 - Executable released
-
-[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](#installation)
-![Platform](https://img.shields.io/badge/platform-Windows-informational)
-![UI](https://img.shields.io/badge/UI-PySide6-success)
-![BLE](https://img.shields.io/badge/BLE-Bleak-9cf)
-![Ollama](https://img.shields.io/badge/Local%20LLMs-Ollama-orange)
-![OpenAI-Compatible](https://img.shields.io/badge/Local%20Servers-OpenAI%20Compatible-yellow)
-
-**Wizpr Suite** is a polished desktop application that connects to a BLE wearable (e.g., Wizpr Ring) and routes device events (button presses, proximity triggers, voice commits) into a configurable toolkit for **LLM workflows**.
-
-The ring protocol is not public (and may vary by firmware). This project is built for rapid integration anyway:
-- Robust BLE scanning + connection
-- **GATT inspector** (services/characteristics)
-- User-mapped characteristic UUIDs
-- High-signal event stream and action routing
-- Multi-provider LLM support (cloud + local)
-- Optional remote API for “use it from anywhere” via secure tunneling
+This repo is a workshop — a place to map what the ring actually does over BLE, capture its signals, decode its protocol, and build the understanding needed to create real applications on top of it. Once the protocol is mapped, the actual apps (iOS client, MCP integrations, AI tooling) will live in their own separate repos.
 
 ---
 
-## Table of Contents
+## What's here
 
-1. [Key Features](#key-features)
-2. [Architecture](#architecture)
-3. [Quick Start](#quick-start)
-4. [Installation](#installation)
-5. [Using the App](#using-the-app)
+### Capture Tool (`wizpr-suite/`)
+A macOS desktop app (PySide6) that:
+- Scans for and connects to the WIZPR RING over BLE
+- Subscribes to all notify characteristics simultaneously
+- Walks through a guided capture session — one labeled action at a time (button press, voice, gesture)
+- Saves a structured JSON session file with every raw BLE payload, timestamped and labeled
+- Includes a live **Command Explorer** for writing commands back to the ring and watching responses
 
-   * [Connect a Ring (BLE)](#connect-a-ring-ble)
-   * [Map Ring Events → Actions](#map-ring-events--actions)
-   * [Chat + Voice](#chat--voice)
-6. [LLM Providers](#llm-providers)
-7. [Plugins](#plugins)
-8. [Remote Access (Optional)](#remote-access-optional)
-9. [Project Structure](#project-structure)
-10. [Security Notes](#security-notes)
-11. [Roadmap](#roadmap)
-12. [License](#license)
+### What we've found so far
 
----
+The ring communicates over a custom GATT service (`00000000-dc2e-4362-93d3-df429eb3ad10`) with three active characteristics:
 
-## Key Features
+| Characteristic | Direction | What it carries |
+|---|---|---|
+| `00000007` | read / write / notify | ASCII command strings (`CLICK`, `MIC_ON`, `MIC_OFF`, `MIC_PRE_ON`) |
+| `00000005` | notify | Mic state bit (`31` = on, `30` = off) |
+| `00000001` | indicate / notify | Raw audio stream (binary, ~24 packets/sec) |
 
-### BLE wearable integration (Windows-first)
+**Mapped events so far:**
 
-* BLE scan, connect, disconnect
-* **Inspect GATT** (services/characteristics, properties)
-* Subscribe to notifications on chosen characteristics
-* Emits semantic events
-
-* Emits raw diagnostics:
-
-  * `raw_notify` (hex payloads for reverse-engineering and mapping)
-
-### Multi-LLM control plane
-
-* **OpenAI (Responses API)** (via `openai` SDK)
-* **Ollama** (local)
-* **OpenAI-compatible servers** (llama.cpp server, LM Studio, etc.)
-* Configurable temperature + endpoint style
-
-### Desktop UX that scales
-
-* Dark + light themes (QSS styling)
-* Central logging view + rotating log files
-* Clean separation between BLE, routing, LLM providers, UI
-
-### Remote “from anywhere” (optional)
-
-* Local FastAPI remote endpoint (`/chat`, `/event`, `/health`)
-* Designed to be exposed via secure tunnels (Tailscale / Cloudflare Tunnel), not raw port-forwarding
-
----
-
-## Architecture
-
-**High-level flow**
-
-1. **Ring** (BLE device) emits notifications
-2. **BLE Manager** scans/connects and subscribes to characteristics
-3. **Ring Controller** interprets button pulses → semantic events
-4. **EventBus** distributes events to the application
-5. **ActionRouter** maps events → actions (configurable)
-6. **LLM Providers** execute chat calls (OpenAI / Ollama / local server)
-7. **UI** shows status, chat, logs; optional **Remote API** mirrors key entrypoints
-
-```text
-BLE Wearable → Bleak → RingController → EventBus → ActionRouter → Actions
-                                                     ├─ UI updates
-                                                     ├─ LLM provider calls
-                                                     └─ Remote API events
+```
+CLICK          → button pressed once
+CLICK CLICK    → button double-press
+CLICK CLICK CLICK → button triple-press
+MIC_PRE_ON     → raise-to-speak gesture detected (pre-activation)
+MIC_ON         → microphone active, audio streaming on char 00000001
+MIC_OFF        → microphone deactivated
 ```
 
+Four write-only characteristics (`00000002`, `00000003`, `00000004`, `00000006`) remain unexplored — these are likely the command channel from app → ring.
+
 ---
 
-## Quick Start
+## Running it
 
 ```bash
-python -m venv .venv
-.venv\Scripts\activate
-pip install -U pip
+# Requires Python 3.10+, macOS (CoreBluetooth via bleak)
+git clone https://github.com/niclydon/wizpr-tools.git
+cd wizpr-tools
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python -m wizpr_suite.app
+python -m wizpr-suite.app.main
 ```
 
----
-
-## Installation
-
-### Requirements
-
-* Windows 10/11 with Bluetooth enabled and functional drivers
-* Python **3.10+** recommended
-* Optional for voice features:
-
-  * Microphone input device
-  * OpenAI API access for transcription (can be replaced later)
-
-### Dependencies
-
-Install from `requirements.txt`:
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-## Using the App
-
-### Connect a Ring (BLE)
-
-1. Open **Devices** tab
-2. Click **Scan**
-3. Select your device and click **Connect**
-4. Click **Inspect GATT**
-5. Copy/paste the relevant characteristic UUIDs into the **Device Profile** fields:
-
-   * **Button notify UUID** (required for button events)
-   * Audio / text UUIDs (optional, device dependent)
-6. Click **Save Profile**
-
-> Some devices require pairing/bonding first. Pair the ring in Windows Bluetooth settings if read/notify fails.
-
-### Map Ring Events → Actions
-
-Go to **Commands** tab and choose what each ring event does:
-
-* `button_single` → `toggle_listen`
-* `button_double` → `send_last_transcript`
-* `button_triple` → `cycle_llm`
-* `button_long` → `noop` (or another action)
-
-Mappings are stored in:
-
-* `%APPDATA%\WizprSuite\config.json` (Windows)
-
-### Chat + Voice
-
-* **Chat** tab:
-
-  * type a message and press Enter
-  * results are sent to the active provider
-* **Start Listening (Mic)**:
-
-  * records short 4s chunks
-  * transcribes (OpenAI STT by default)
-  * stores the latest transcript
-* **Send Last Transcript**:
-
-  * injects the transcript into chat and sends it
-
----
-
-## LLM Providers
-
-### OpenAI (Responses API)
-
-Configure in the **Models** tab (recommended), or via environment variable:
-
-```bash
-set WIZPR_OPENAI_API_KEY=your_key_here
-```
-
-### Ollama (local)
-
-* Install Ollama and run it
-* Default base URL: `http://127.0.0.1:11434`
-* Choose a model (example: `llama3.2`)
-
-### OpenAI-Compatible Servers (llama.cpp server / LM Studio / etc.)
-
-* Set base URL (example: `http://127.0.0.1:8080`)
-* Choose endpoint style:
-
-  * `/v1/chat/completions` **or**
-  * `/v1/responses`
-
----
-
-## Plugins
-
-Drop a provider plugin into:
-
-* Windows: `%APPDATA%\WizprSuite\plugins\`
-* Linux/macOS: `~/.wizpr_suite/plugins/`
-
-Each plugin is a single `.py` with a `register(registry)` function.
-
-Example is included:
-
-* `wizpr_suite/plugins/example_provider.py`
-
-Minimal template:
-
-```python
-from dataclasses import dataclass
-from typing import Dict, List
-from wizpr_suite.llm.providers.base import LLMProvider, LLMResponse
-
-@dataclass
-class MyProvider(LLMProvider):
-    id: str = "my_provider"
-    name: str = "My Provider"
-
-    async def health(self) -> bool:
-        return True
-
-    async def chat(self, messages: List[Dict[str, str]], *, temperature=None) -> LLMResponse:
-        return LLMResponse(text="hello", raw={})
-
-def register(registry):
-    registry.register(MyProvider())
-```
-
----
-
-## Remote Access (Optional)
-
-Run the remote server:
-
-```bash
-python -m wizpr_suite.server --host 127.0.0.1 --port 8844 --token YOUR_TOKEN
-```
-
-Then expose it safely with a tunnel (recommended):
-
-* Tailscale
-* Cloudflare Tunnel
-* WireGuard
-
-**Do not** open the port to the internet without strict controls.
-
----
-
-## Project Structure
-
-```text
-wizpr_suite/
-├─ wizpr_suite/
-│  ├─ app/                 # entrypoints
-│  ├─ ble/                 # BLE scanning, connection, ring controller
-│  ├─ core/                # config, event bus, action routing, app state
-│  ├─ llm/                 # provider registry + implementations
-│  ├─ audio/               # mic recording + transcription
-│  ├─ server/              # optional FastAPI remote API
-│  ├─ ui/                  # PySide6 main window + widgets + themes
-│  ├─ plugins/             # example plugin provider
-│  └─ resources/           # QSS themes
-├─ tests/
-└─ requirements.txt
-```
-
----
-
-## Security Notes
-
-* Treat the **remote API token** as a secret.
-* Prefer **local binding** (`127.0.0.1`) + a secure tunnel over direct exposure.
-* BLE payload logging may include sensitive content depending on device behavior. Be mindful when sharing logs.
+Disconnect the ring from your iPhone before scanning. The ring only advertises when not already connected.
 
 ---
 
 ## Roadmap
 
-* Ring audio ingestion (if device streams audio over BLE) with:
-
-  * framing/chunk reassembly
-  * codec detection (PCM/ADPCM/etc.)
-  * on-device transcript decode (if supported)
-* Proximity sensor event mapping (if device exposes it over BLE)
-* Macro/action engine:
-
-  * app-level “workflows” (e.g., “summarize clipboard → send to LLM → paste back”)
-  * hotkeys + system tray mode
-* More providers (Anthropic, Groq, local gRPC, etc.)
-* Linux support hardening
+- [ ] Decode audio stream format (codec, sample rate, bit depth)
+- [ ] Map write-only characteristics — discover what commands the app sends to the ring
+- [ ] Build protocol reference doc from captured sessions
+- [ ] iOS app (separate repo)
+- [ ] MCP tools / AI integrations (separate repo)
 
 ---
 
-## License
+## Origin
 
-**MIT**.
+Forked from [R-D-BioTech-Alaska/Wizpr-Suite](https://github.com/R-D-BioTech-Alaska/Wizpr-Suite), which provided the initial BLE scaffolding (bleak scanner, GATT inspector, PySide6 skeleton) and the observation that the ring protocol is undocumented. That foundation made it possible to get connected and start capturing quickly. The capture tool, protocol analysis, and everything forward from here is new work.
 
----
-
-### Disclaimer
-
-This project is not associated with Wizpr ring. This project is intended for interoperability and user-controlled workflows. Device protocols and capabilities vary; use responsibly and respect vendor terms and privacy.
+Licensed MIT. See [LICENSE](LICENSE).
