@@ -17,6 +17,11 @@ build/
 .remember/
 docs/superpowers/
 
+# Personal narrative docs (kept locally, not public)
+CLAUDE.md
+CHANGES.md
+docs/explorations/
+
 # Captured session data (local only, can be large)
 ~/.wizprsuite/captures/
 
