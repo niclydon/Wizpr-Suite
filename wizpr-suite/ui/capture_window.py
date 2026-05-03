@@ -329,13 +329,31 @@ class CaptureWindow(QtWidgets.QMainWindow):
             self._btn_skip.setEnabled(True)
             self._countdown_label.setText("Done — press Next or Repeat")
 
+    # Audio stream char — captured silently, not rendered to list
+    AUDIO_CHAR = "00000001-dc2e-4362-93d3-df429eb3ad10"
+
     def _on_payload_received(self, char_uuid: str, hex_data: str) -> None:
         if self._session:
             self._session.add_payload(
                 self._current_action_id, char_uuid, bytearray.fromhex(hex_data)
             )
-        self._payload_list.addItem(f"{char_uuid[-8:]}  {hex_data}")
-        self._payload_list.scrollToBottom()
+        if char_uuid == self.AUDIO_CHAR:
+            # Update audio counter without adding list items (too frequent)
+            count = sum(
+                1 for p in (self._session.captures[-1].payloads if self._session and self._session.captures else [])
+                if p.characteristic_uuid == self.AUDIO_CHAR
+            )
+            if self._payload_list.count() and self._payload_list.item(0).text().startswith("🎙"):
+                self._payload_list.item(0).setText(f"🎙 Audio stream: {count} packets captured")
+            else:
+                self._payload_list.insertItem(0, f"🎙 Audio stream: {count} packets captured")
+        else:
+            try:
+                label = bytearray.fromhex(hex_data).decode("utf-8").strip()
+            except Exception:
+                label = hex_data
+            self._payload_list.addItem(f"{char_uuid[-8:]}  {label}")
+            self._payload_list.scrollToBottom()
 
     def _skip_action(self) -> None:
         if self._session and self._session.captures:
