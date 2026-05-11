@@ -7,6 +7,7 @@ from typing import Any
 from openai import OpenAI
 
 from ..base import LLMResponse
+from .langfuse_observe import observed_generation
 
 
 class OpenAIProvider:
@@ -63,7 +64,12 @@ class OpenAIProvider:
                     messages=[{"role": "user", "content": prompt}],
                     temperature=float(temperature),
                 )
-            resp = await asyncio.to_thread(_call)
+            resp = await observed_generation(
+                "wizpr.openai.generate",
+                model,
+                prompt,
+                lambda: asyncio.to_thread(_call),
+            )
             txt = ""
             try:
                 txt = resp.choices[0].message.content or ""

@@ -3,6 +3,7 @@ from __future__ import annotations
 import httpx
 
 from ..base import LLMResponse
+from .langfuse_observe import observed_generation
 
 
 class OpenAICompatProvider:
@@ -58,10 +59,13 @@ class OpenAICompatProvider:
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": float(temperature),
             }
-            async with httpx.AsyncClient(timeout=60.0) as c:
-                r = await c.post(self._base_url.rstrip("/") + "/v1/chat/completions", json=payload, headers=self._headers())
-                r.raise_for_status()
-                data = r.json()
+            async def _call():
+                async with httpx.AsyncClient(timeout=60.0) as c:
+                    r = await c.post(self._base_url.rstrip("/") + "/v1/chat/completions", json=payload, headers=self._headers())
+                    r.raise_for_status()
+                    return r.json()
+
+            data = await observed_generation("wizpr.openai-compat.generate", model, prompt, _call)
             txt = ""
             try:
                 txt = data["choices"][0]["message"]["content"]
